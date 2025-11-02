@@ -11,13 +11,18 @@ import (
 )
 
 func GetTimeline(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uint)
+	userID, ok := c.Locals("user_id").(uint)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{
+			"error": "unauthorizwd:invalid token payload",
+		})
+	}
 
 	limitParam := c.Query("limit", "10")
 	beforeParam := c.Query("before", "")
 
 	limit, err := strconv.Atoi(limitParam)
-	if err != nil {
+	if err != nil || limit <= 0 {
 		limit = 10
 	}
 
@@ -41,7 +46,7 @@ func GetTimeline(c *fiber.Ctx) error {
 
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
-			"error": "faild to load timeline",
+			"error": "faild to load timeline from redis",
 		})
 	}
 
@@ -51,10 +56,24 @@ func GetTimeline(c *fiber.Ctx) error {
 
 	postID := make([]uint, 0, len(res))
 	for _, z := range res {
-		id, _ := strconv.Atoi(z.Member.(string))
-		postID = append(postID, uint(id))
-	}
+		switch v := z.Member.(type) {
+		case string:
+			id, err := strconv.Atoi(v)
+			if err == nil {
+				postID = append(postID, uint(id))
+			}
+		case int:
+			postID = append(postID, uint(v))
+		case int64:
+			postID = append(postID, uint(v))
+		default:
+			continue
+		}
 
+	}
+	if len(postID) == 0 {
+		return c.JSON([]domain.Post{})
+	}
 	var posts []domain.Post
 
 	if err := config.DB.Where("id IN ?", postID).Order("created_at DESC").Find(&posts).Error; err != nil {

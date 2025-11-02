@@ -30,11 +30,6 @@ func StartFanoutWorker(rdb *redis.Client, postRepo domain.PostRepository, userRe
 
 		post, err := postRepo.GetByIDp(ctx, postID)
 
-		if err != nil {
-			log.Printf("faild to get follower: %v\n", err)
-			continue
-		}
-
 		followers, err := followRepo.GetFollowers(ctx, post.AuthorID)
 		if err != nil {
 			log.Printf("faild to get followers: %v\n", err)

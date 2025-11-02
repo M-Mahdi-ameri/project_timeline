@@ -14,7 +14,7 @@ func JWTProtected() fiber.Handler {
 				"error": "missing or invalid token",
 			})
 		}
-		tokenStirng := strings.TrimPrefix(authheader, "Bearer")
+		tokenStirng := strings.TrimPrefix(authheader, "Bearer ")
 
 		userID, err := ParseJWT(tokenStirng)
 		if err != nil {

@@ -7,13 +7,11 @@ import (
 )
 
 func SetupRoutes(app *fiber.App, postRepo domain.PostRepository, userRepo domain.UserRepository, followerRepo domain.FollowerRepository) {
-	app.Post("/register", Register)
-	app.Post("/login", Login)
 
 	app.Post("/posts", utils.JWTProtected(), CreatePost(postRepo))
 	app.Get("/posts/:id", utils.JWTProtected(), GetpostByID(postRepo))
 	app.Get("/posts/author/:id", utils.JWTProtected(), GetPostsByAuthor(postRepo))
-	app.Delete("/posts/:id", utils.JWTProtected(), DeletePost(postRepo))
+	app.Delete("/posts/:id", utils.JWTProtected(), DeletePost(postRepo, followerRepo))
 
 	app.Get("/timeline", utils.JWTProtected(), GetTimeline)
 

@@ -24,6 +24,8 @@ func main() {
 	postRepo := repository.NewGormPostRepo(config.DB)
 	userRepo := repository.NewGormUserRepo(config.DB)
 	followerRepo := repository.NewGormFollowerRepo(config.DB)
+	app.Post("/register", handlers.Register)
+	app.Post("/login", handlers.Login)
 
 	go service.StartFanoutWorker(config.RDB, postRepo, userRepo, followerRepo)
 

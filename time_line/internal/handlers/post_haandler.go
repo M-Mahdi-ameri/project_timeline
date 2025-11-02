@@ -16,7 +16,7 @@ func CreatePost(repo domain.PostRepository) fiber.Handler {
 		var post domain.Post
 		if err := c.BodyParser(&post); err != nil {
 			return c.Status(400).JSON(fiber.Map{
-				"error": "invalid body",
+				"error": err,
 			})
 		}
 		userID := c.Locals("user_id").(uint)
@@ -63,16 +63,36 @@ func GetPostsByAuthor(repo domain.PostRepository) fiber.Handler {
 		return c.Status(201).JSON(posts)
 	}
 }
-func DeletePost(repo domain.PostRepository) fiber.Handler {
+func DeletePost(repo domain.PostRepository, followRepo domain.FollowerRepository) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		id, _ := strconv.Atoi(c.Params("id"))
-		if err := repo.Deletep(context.Background(), uint(id)); err != nil {
+
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"error": "invalid post id",
+			})
+		}
+
+		ctx := context.Background()
+		userID := c.Locals("user_id").(uint)
+		if err := repo.Deletep(ctx, uint(id)); err != nil {
 			return c.Status(404).JSON(fiber.Map{
 				"error": "post not found",
 			})
 		}
-		return c.JSON(fiber.Map{
-			"meesage": "post deleted",
+		followers, err := followRepo.GetFollowers(ctx, userID)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{
+				"error": "faid to get followers",
+			})
+		}
+		for _, f := range followers {
+			key := fmt.Sprintf("timeline:%d", f)
+			config.RDB.ZRem(ctx, key, id)
+		}
+		config.RDB.ZRem(ctx, fmt.Sprintf("timeline:%d", userID), id)
+		return c.Status(200).JSON(fiber.Map{
+			"meesage": "post deleted succesfully",
 		})
 	}
 }

@@ -11,14 +11,14 @@ import (
 )
 
 type registerRequest struct {
-	Username string `json:"username" valid:"required"`
-	Email    string `json:"email" valid:"email,required"`
-	Password string `json:"password" valid:"required,length(6|32)"`
+	Username string `json:"username" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=6,max=32"`
 }
 
 type loginRequest struct {
-	Email    string `json:"email" valid:"required,email"`
-	Password string `json:"password" valid:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
 }
 
 func Register(c *fiber.Ctx) error {
@@ -37,7 +37,7 @@ func Register(c *fiber.Ctx) error {
 	}
 	var existing domain.User
 
-	if err := config.DB.Where("email: ?", req.Email).First(existing).Error; err != nil {
+	if err := config.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": err.Error(),
 		})
@@ -92,7 +92,7 @@ func Login(c *fiber.Ctx) error {
 			"error": "faild to generate token",
 		})
 	}
-	return c.Status(500).JSON(fiber.Map{
-		"token": token,
+	return c.Status(200).JSON(fiber.Map{
+		"token": token, "user_id": user.ID,
 	})
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/M-Mahdi-ameri/time_line/internal/domain"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -29,7 +30,23 @@ func Initmysql() {
 	if err != nil {
 		log.Fatalf("falid to connect to mysql %v", err)
 	}
+
+	sqlDb, err := db.DB()
+	if err != nil {
+		log.Fatalf("fild to get db instance: %v", err)
+	}
+
+	if err := sqlDb.Ping(); err != nil {
+		log.Fatalf("mysql ping faild :%v", err)
+	}
 	DB = db
 	log.Println("connect to mysql succesfully")
+
+	err = db.AutoMigrate(&domain.User{}, &domain.Post{}, &domain.Follower{})
+	if err != nil {
+		log.Fatalf("automiragrate faild : %v", err)
+	}
+
+	log.Println("database schema miragrated succesfully")
 
 }

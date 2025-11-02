@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
+	"github.com/M-Mahdi-ameri/time_line/internal/config"
 	"github.com/M-Mahdi-ameri/time_line/internal/domain"
 	"github.com/gofiber/fiber/v2"
 )
@@ -19,8 +21,14 @@ func FollowUser(repo domain.FollowerRepository) fiber.Handler {
 				"error": "invalid body",
 			})
 		}
-		followeID := c.Locals("user_id").(uint)
-		if err := repo.Follow(context.Background(), req.UserID, followeID); err != nil {
+		followerID := c.Locals("user_id").(uint)
+
+		if followerID == req.UserID {
+			return c.Status(400).JSON(fiber.Map{
+				"error": "you cant follow yourself",
+			})
+		}
+		if err := repo.Follow(context.Background(), req.UserID, followerID); err != nil {
 			return c.Status(500).JSON(fiber.Map{
 				"error": "faild to follow",
 			})
@@ -41,13 +49,20 @@ func UnfollowUser(repo domain.FollowerRepository) fiber.Handler {
 				"error": "invalid body",
 			})
 		}
-		followeID := c.Locals("user_id").(uint)
-		if err := repo.Unfollow(context.Background(), req.UserID, followeID); err != nil {
+		followerID := c.Locals("user_id").(uint)
+		if err := repo.Unfollow(context.Background(), req.UserID, followerID); err != nil {
 			return c.Status(500).JSON(fiber.Map{
 				"error": "faild to unfollow",
 			})
 		}
-		return c.JSON(fiber.Map{
+
+		var authorPosts []domain.Post
+		if err := config.DB.Where("author_id = ?", req.UserID).Find(&authorPosts).Error; err == nil {
+			for _, p := range authorPosts {
+				config.RDB.ZRem(context.Background(), fmt.Sprintf("timeline:%d", followerID), p.ID)
+			}
+		}
+		return c.Status(200).JSON(fiber.Map{
 			"message": "unfollowed seccessfully",
 		})
 	}
